@@ -1,0 +1,26 @@
+{
+    "files.associations": {
+        "*.html": "html",
+        "cwchar": "c",
+        "string": "c",
+        "ostream": "c",
+        "vector": "c",
+        "*.tcc": "c",
+        "deque": "c",
+        "unordered_map": "c",
+        "stdio.h": "c",
+        "math.h": "c",
+        "typeinfo": "c",
+        "stdlib.h": "c",
+        "assert.h": "c",
+        "errno.h": "c",
+        "cstdlib": "c",
+        "cmath": "c",
+        "cstdarg": "c",
+        "cstdio": "c",
+        "type_traits": "c",
+        "limits": "c",
+        "cstdint": "c"
+    },
+    "editor.suggest.localityBonus": true,
+}
