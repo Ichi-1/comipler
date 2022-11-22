@@ -5,7 +5,7 @@
 #include <string.h>
 
 
-const char *whitespace = " \r";
+const char *whitespace = " \r\n";
 const char *delimiters = " \r\n,():";
 
 typedef struct Error {
@@ -109,19 +109,17 @@ Error lex(char *source, char **start, char **end)
     }
 
     *start = source;    
-    *start += strcspn(*start, whitespace);
-
-    if (**end == '\0') {
-        return err;
-    }
-
+    *start += strspn(*start, whitespace);
     *end = *start;
+
+    if (**end == '\0')
+        return err;
+
     *end += strcspn(*start, delimiters);
 
-    if (*end == *start) {
+    if (*end == *start)
         *end += 1;
-    }
-    printf("lexed: %.*s", *end - *start, *start);
+    
     return err;
 }
 
@@ -145,13 +143,13 @@ Error parse_expression(char *source, Node *result)
 
     while ((err = lex(end, &start, &end)).type == ERROR_NONE) {
         if (end - start == 0) { break; }
-        printf("This: %.*s\n", end - start, start);
+        printf("lexed: %.*s\n", end - start, start);
     }
     return err;
 }
 
 void print_usage(char **argv) 
-{
+{   
     printf("USAGE: %s <path_to_file_to_compile>\n", argv[0]);
 }
 
