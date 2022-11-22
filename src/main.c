@@ -4,6 +4,10 @@
 #include <errno.h>
 #include <string.h>
 
+
+const char *whitespace = " \r";
+const char *delimiters = " \r\n,():";
+
 typedef struct Error {
     enum ErrorType {
         ERROR_NONE = 0,
@@ -12,15 +16,58 @@ typedef struct Error {
         ERROR_GENERIC,
         ERROR_SYNTAX,
         ERROR_ARGS,
+        ERROR_FILE,
+        ERROR_MAX,
     } type;
     char *msg;
 } Error;
 
-
 Error ok = { ERROR_NONE, NULL };
 
+// TODO:
+// |-- API to create new node
+// |-- API to add node as child
+typedef long long integer_t;
+typedef struct Node {
+    enum NodeType {
+        NODE_TYPE_NONE,
+        NODE_TYPE_INTEGER,
+        NODE_TYPE_PROGRAM,
+        NODE_TYPE_MAX,
+    } type;
+
+    union NodeValue {
+        integer_t integer;
+    } value;
+
+    struct Node **child;
+} Node;
+
+#define none_type(node) ((node).type == NODE_TYPE_NONE)
+#define int_type(node) ((node).type == NODE_TYPE_INTEGER)
+
+// TODO: 
+// |-- API to create new Binding;
+// |-- API to add Binding to environment;
+typedef struct Binding {
+    char *id;
+    Node *value;
+    struct Binding *next;
+} Binding;
+
+// TODO: 
+// |-- API to create new environment;
+typedef struct Environment {
+    struct Environment *parent;
+    Binding *bind;
+} Environment;
+
+
+
 void print_error(Error err) 
-{
+{   
+    if (err.type == ERROR_NONE) { return; }
+        
     printf("ERROR: ");
     switch (err.type) {
       default:
@@ -41,12 +88,8 @@ void print_error(Error err)
     }
 
     putchar('\n');
-    if (err.msg) {
-        printf("     : %s\n", err.msg);
-    }
+    if (err.msg) { printf("     : %s\n", err.msg); }
 }
-
-
 
 #define ERROR_CREATE(n, t, msg)       \
     Error (n) = { (t), (msg) }
@@ -55,9 +98,6 @@ void print_error(Error err)
     (n).type = (t);                   \
     (n).msg = (message);
 
-
-const char *whitespace = " \r";
-const char *delimiters = " \r\n,():";
 
 // Given a source, get the next token and point to it with start and end
 Error lex(char *source, char **start, char **end) 
@@ -81,21 +121,30 @@ Error lex(char *source, char **start, char **end)
     if (*end == *start) {
         *end += 1;
     }
-
     printf("lexed: %.*s", *end - *start, *start);
     return err;
 }
 
-Error parse_expression(char *source)
+
+void environment_set()
 {
+
+}
+
+/// @return zero upon success
+int valid_identifier(char *id) 
+{
+    return strpbrk(id, whitespace) == NULL ? 0 : 1;
+}
+
+Error parse_expression(char *source, Node *result)
+{
+    Error err = ok;
     char *start = source;
     char *end = source;
-    Error err = ok;
 
     while ((err = lex(end, &start, &end)).type == ERROR_NONE) {
-        if (end - start == 0) {
-            break;
-        }
+        if (end - start == 0) { break; }
         printf("This: %.*s\n", end - start, start);
     }
     return err;
@@ -176,11 +225,11 @@ int main (int argc, char **argv)
     char *path = argv[1];
     char *contents = files_contents(path);
     if (contents) {
-        printf("Contents of %s:\n---\n%s\n---\n", path, contents);
-        free(contents);
-
-        Error err = parse_expression(contents);
+        // printf("Contents of %s:\n---\n%s\n---\n", path, contents);
+        Node expression;
+        Error err = parse_expression(contents, &expression);
         print_error(err);
+        free(contents);
     }
     return 0;
 }
