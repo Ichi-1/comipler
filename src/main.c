@@ -5,8 +5,23 @@
 #include <string.h>
 
 
+
 const char *whitespace = " \r\n";
 const char *delimiters = " \r\n,():";
+
+typedef struct Token {
+    char *start;
+    char *end;
+    struct Token *next;
+} Token;
+
+Token *token_create()
+{
+    Token *token = malloc(sizeof(Token));
+    assert(token && "Could not allocate memroy for token");
+    memset(token, 0, sizeof(Token));
+    return token;
+}
 
 typedef struct Error {
     enum ErrorType {
@@ -22,7 +37,6 @@ typedef struct Error {
     char *msg;
 } Error;
 
-Error ok = { ERROR_NONE, NULL };
 
 // TODO:
 // |-- API to create new node
@@ -43,8 +57,7 @@ typedef struct Node {
     struct Node **child;
 } Node;
 
-#define none_type(node) ((node).type == NODE_TYPE_NONE)
-#define int_type(node) ((node).type == NODE_TYPE_INTEGER)
+
 
 // TODO: 
 // |-- API to create new Binding;
@@ -62,6 +75,9 @@ typedef struct Environment {
     Binding *bind;
 } Environment;
 
+
+#define none_type(node) ((node).type == NODE_TYPE_NONE)
+#define int_type(node) ((node).type == NODE_TYPE_INTEGER)
 
 
 void print_error(Error err) 
@@ -99,30 +115,31 @@ void print_error(Error err)
     (n).msg = (message);
 
 
+
+Error ok = { ERROR_NONE, NULL };
+
 // Given a source, get the next token and point to it with start and end
-Error lex(char *source, char **start, char **end) 
+Error lex(char *source, Token *token) 
 {
     Error err = ok;
-    if (!source || !start || !end) {
+    if (!source || !token) {
         ERROR_PREP(err, ERROR_ARGS, "Can't lexing empty source");
         return err;
     }
 
-    *start = source;    
-    *start += strspn(*start, whitespace);
-    *end = *start;
+    token->start = source;    
+    token->start += strspn(token->start, whitespace);
+    token->end = token->start;
 
-    if (**end == '\0')
-        return err;
+    if (*(token->end) == '\0') { return err; }
 
-    *end += strcspn(*start, delimiters);
+    token->end += strcspn(token->start, delimiters);
 
-    if (*end == *start)
-        *end += 1;
-    
+    if (token->end == token->start) {
+        token->end += 1;
+    }
     return err;
 }
-
 
 void environment_set()
 {
@@ -136,14 +153,23 @@ int valid_identifier(char *id)
 }
 
 Error parse_expression(char *source, Node *result)
-{
-    Error err = ok;
-    char *start = source;
-    char *end = source;
+{   
+    Token *tokens = NULL;
+    Token current_token;
+    
+    current_token.next = NULL;
+    current_token.start = source;
+    current_token.end = source;
 
-    while ((err = lex(end, &start, &end)).type == ERROR_NONE) {
-        if (end - start == 0) { break; }
-        printf("lexed: %.*s\n", end - start, start);
+    Error err = ok;
+
+    while ((err = lex(current_token.end, &current_token)).type == ERROR_NONE) {
+        if (current_token.end - current_token.start == 0) { break; }
+        printf(
+            "lexed: %.*s\n", 
+            current_token.end - current_token.start, 
+            current_token.start
+        );
     }
     return err;
 }
