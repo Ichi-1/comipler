@@ -5,7 +5,6 @@
 #include <string.h>
 
 
-
 const char *whitespace = " \r\n";
 const char *delimiters = " \r\n,():";
 
@@ -21,6 +20,30 @@ Token *token_create()
     assert(token && "Could not allocate memroy for token");
     memset(token, 0, sizeof(Token));
     return token;
+}
+
+void free_tokens(Token *root)
+{
+    while (root) {
+        
+    }
+}
+
+void print_token(Token *root)
+{   
+    size_t count = 1;
+    while (root) {
+        // TODO: Remove this limit
+        if (count > 1000) { break; }
+
+        printf("Token %zu: ", count);
+        if (root->start && root->end) {
+            printf("%.*s", root->end - root->start, root->start);
+        }
+        putchar('\n');
+        root = root->next;
+        count++;
+    }
 }
 
 typedef struct Error {
@@ -119,7 +142,7 @@ void print_error(Error err)
 Error ok = { ERROR_NONE, NULL };
 
 // Given a source, get the next token and point to it with start and end
-Error lex(char *source, Token *token) 
+Error lex(char *source, Token *token)
 {
     Error err = ok;
     if (!source || !token) {
@@ -147,7 +170,7 @@ void environment_set()
 }
 
 /// @return zero upon success
-int valid_identifier(char *id) 
+int valid_identifier(char *id)
 {
     return strpbrk(id, whitespace) == NULL ? 0 : 1;
 }
@@ -155,8 +178,9 @@ int valid_identifier(char *id)
 Error parse_expression(char *source, Node *result)
 {   
     Token *tokens = NULL;
-    Token current_token;
+    Token *token_it = tokens;
     
+    Token current_token;
     current_token.next = NULL;
     current_token.start = source;
     current_token.end = source;
@@ -164,22 +188,40 @@ Error parse_expression(char *source, Node *result)
     Error err = ok;
 
     while ((err = lex(current_token.end, &current_token)).type == ERROR_NONE) {
-        if (current_token.end - current_token.start == 0) { break; }
-        printf(
-            "lexed: %.*s\n", 
-            current_token.end - current_token.start, 
-            current_token.start
-        );
+
+        if (current_token.end - current_token.start == 0) { 
+            break; 
+        }
+        // TODO: conditional branch could be removed from the loop
+        if (tokens) {
+            // Overwrite into tokens->next
+            token_it->next = token_create();
+            memcpy(token_it->next, &current_token, sizeof(Token));
+            token_it = token_it->next;
+        } else {
+            // Overwrite tokens
+            tokens = token_create();
+            memcpy(tokens, &current_token, sizeof(Token));
+            token_it = tokens;
+        }
+        
+
+        //? print tokens reversed
+        // Token *rest_of_token = tokens;
+        // tokens = token_create();
+        // memcpy(tokens, &current_token, sizeof(Token));
+        // tokens->next = rest_of_token;
     }
+    print_token(tokens);
     return err;
 }
 
-void print_usage(char **argv) 
+void print_usage(char **argv)
 {   
     printf("USAGE: %s <path_to_file_to_compile>\n", argv[0]);
 }
 
-long file_size(FILE *file) 
+long file_size(FILE *file)
 {
     if (!file) {  return 0; }
 
@@ -199,7 +241,7 @@ long file_size(FILE *file)
     return out;
 }
 
-char *files_contents(char *path) 
+char *files_contents(char *path)
 {
     FILE *file = fopen(path, "r");
     if (!file) {
@@ -239,7 +281,7 @@ char *files_contents(char *path)
     return contents;
 }
 
-int main (int argc, char **argv) 
+int main (int argc, char **argv)
 {
     if (argc < 2) {
         print_usage(argv);
