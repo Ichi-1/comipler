@@ -23,9 +23,11 @@ Token *token_create()
 }
 
 void free_tokens(Token *root)
-{
+{   
     while (root) {
-        
+        Token *token_to_free = root;
+        root = root->next;
+        free(token_to_free);
     }
 }
 
@@ -72,11 +74,9 @@ typedef struct Node {
         NODE_TYPE_PROGRAM,
         NODE_TYPE_MAX,
     } type;
-
     union NodeValue {
         integer_t integer;
     } value;
-
     struct Node **child;
 } Node;
 
@@ -102,6 +102,16 @@ typedef struct Environment {
 #define none_type(node) ((node).type == NODE_TYPE_NONE)
 #define int_type(node) ((node).type == NODE_TYPE_INTEGER)
 
+void node_free(Node *root) {
+    if (root->child) {
+        Node *child = *(root->child);
+        while(child) {
+            node_free(root->child);
+            child++;
+        }
+    }
+    free(root);
+}
 
 void print_error(Error err) 
 {   
@@ -175,6 +185,23 @@ int valid_identifier(char *id)
     return strpbrk(id, whitespace) == NULL ? 0 : 1;
 }
 
+/// @return Boolean-like value; 1 for succes, 0 for fail; 
+int token_string_equalp(char *string, Token *token)
+{   
+    if (!string || !token) { return 0; }
+
+    char *start = token->start;
+
+    while (*string && token->start < token->end) {
+        if (*string != *start) {
+            return 0;
+        }
+        string++;
+        start++;
+    }
+    return 1;
+}
+
 Error parse_expression(char *source, Node *result)
 {   
     Token *tokens = NULL;
@@ -189,10 +216,9 @@ Error parse_expression(char *source, Node *result)
 
     while ((err = lex(current_token.end, &current_token)).type == ERROR_NONE) {
 
-        if (current_token.end - current_token.start == 0) { 
-            break; 
-        }
+        if (current_token.end - current_token.start == 0) { break; }
         // TODO: conditional branch could be removed from the loop
+
         if (tokens) {
             // Overwrite into tokens->next
             token_it->next = token_create();
@@ -204,15 +230,28 @@ Error parse_expression(char *source, Node *result)
             memcpy(tokens, &current_token, sizeof(Token));
             token_it = tokens;
         }
-        
-
-        //? print tokens reversed
-        // Token *rest_of_token = tokens;
-        // tokens = token_create();
-        // memcpy(tokens, &current_token, sizeof(Token));
-        // tokens->next = rest_of_token;
     }
     print_token(tokens);
+
+    Node *root = calloc(1, sizeof(Node));
+    assert(root && "Could not allocate memory for AST Node");
+    token_it = tokens;
+
+    while (token_it) {
+        // TODO: Map constructs from the language and attempt to create nodes
+
+        if (token_string_equalp(":", token_it)){
+            printf("Found `:` at token\n");
+            if (token_it->next && token_string_equalp("=", token_it->next))  {
+                printf("Found assignment\n");
+            } else if (token_string_equalp("int", token_it->next)) {
+                // TODO: make helper to check if string is type name.
+                printf("Found a variable declaration\n");
+            }
+        }
+        token_it = token_it->next;
+    }
+    free_tokens(tokens);
     return err;
 }
 
